@@ -1,6 +1,6 @@
 {
   "name": "ravens",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "node.js contact form handler using ReCaptcha",
   "main": "index.js",
   "scripts": {
