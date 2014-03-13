@@ -18,11 +18,15 @@ Ravens.prototype.handler = function(){
 	return function(req, res){
 		self.process(req.ip, req.body, function(error){
 			if(error){
-				res.statusCode = 500;
-				res.end(error);
+				res.json({
+					ok:false,
+					error:error
+				});
 			}
 			else{
-				res.end('ok');
+				res.json({
+					ok:true
+				})
 			}
 		})
 	}
@@ -38,7 +42,7 @@ Ravens.prototype.process = function(ip, formdata, callback){
   var error_string = null;
 
   if(!challenge || !response){
-  	error_string = 'Please fillout the captcha';
+  	error_string = 'Please fillout the captcha correctly';
   }
 
 /*
@@ -56,13 +60,14 @@ Ravens.prototype.process = function(ip, formdata, callback){
   	return;
   }
 
-  simple_recaptcha(privateKey, ip, challenge, response, function(err) {
+  simple_recaptcha(self.privateKey, ip, challenge, response, function(err) {
 
   	if (err){
     	return callback('The Captcha was entered incorrectly.  Please try again');
     }
 
     self.emit('send', formdata);
+    callback();
     
   })
 }
