@@ -1,7 +1,7 @@
 ravens
 ======
 
-node.js contact form handler using Mailgun and ReCaptcha
+node.js contact form handler using ReCaptcha
 
 ## installation
 
@@ -16,15 +16,20 @@ var Ravens = require('ravens');
 
 var ravens = Ravens({
 	recaptcha_public_key:'...',
-	recaptcha_private_key:'...',
-	mailgun_domain:'...',
-	mailgun_key:'...'
+	recaptcha_private_key:'...'
+})
+
+ravens.on('send', function(formdata){
+
+	// this formdata has been validated by ReCaptcha
+	// you can use it to send an email or do whatever
+
 })
 
 var app = express();
 
 // mount the form submit route onto the express application
-app.use('/contactsubmit', ravens.handler);
+app.use('/contactsubmit', ravens.handler());
 ```
 
 ## Ravens(appconfig)
@@ -33,23 +38,26 @@ create a new express handler with the following properties:
 
  * recaptcha_public_key - the public key for your recaptcha account
  * recaptcha_private_key - the private key for your recaptcha account 
- * mailgun_domain - the domain for your mailgun account
- * mailgun_key - the key for your mailgun account
- * emails - an array of emails to send the contact form submissions to
 
 ## events
 
 these events are emitted by a ravens instance:
 
-### form
+### emit('send', formdata)
 
-```js
-var ravens = Ravens({...});
+gives a chance to mess with the formdata before the emails are sent
 
-ravens.on('form', function(formdata){
-	formdata.extradata = 'this is the extra data';
-})
+## form data
 
-```
+When you submit formdata to the handler - the request body must be JSON and must contain the following fields:
 
+ * recaptcha_challenge_field
+ * recaptcha_response_field
 
+These are acquired by using the [ReCaptcha client libraries](https://www.google.com/recaptcha/admin/create).
+
+There is an angular plugin for Ravens that renders a nice contact form with Recaptcha Plugin built in - [ng-ravens](https://github.com/binocarlos/ng-ravens).
+
+### license
+
+MIT

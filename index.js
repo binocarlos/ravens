@@ -1,5 +1,71 @@
 var simple_recaptcha = require('simple-recaptcha');
-var TextMail = require('textmail');
+var EventEmitter = require('events').EventEmitter;
+var util = require('util');
+var path = require('path');
+
+function Ravens(options){
+	this.options = options;
+	EventEmitter.call(this);
+
+	this.privateKey = options.recaptcha_private_key;
+	this.publicKey = options.recaptcha_public_key;
+}
+
+util.inherits(Ravens, EventEmitter);
+
+Ravens.prototype.handler = function(){
+	var self = this;
+	return function(req, res){
+		self.process(req.ip, req.body, function(error){
+			if(error){
+				res.statusCode = 500;
+				res.end(error);
+			}
+			else{
+				res.end('ok');
+			}
+		})
+	}
+}
+
+Ravens.prototype.process = function(ip, formdata, callback){
+	var self = this;
+	formdata = formdata || {};
+
+  var challenge = formdata.recaptcha_challenge_field;
+  var response = formdata.recaptcha_response_field;
+
+  var error_string = null;
+
+  if(!challenge || !response){
+  	error_string = 'Please fillout the captcha';
+  }
+
+/*
+  ['email', 'name', 'subject', 'message'].forEach(function(f){
+  	var val = formdata[f];
+
+  	if(!val){
+  		error_string = 'please enter a ' + f + ' string';
+  	}
+  })
+*/
+
+  if(error_string){
+  	callback(error_string);
+  	return;
+  }
+
+  simple_recaptcha(privateKey, ip, challenge, response, function(err) {
+
+  	if (err){
+    	return callback('The Captcha was entered incorrectly.  Please try again');
+    }
+
+    self.emit('send', formdata);
+    
+  })
+}
 
 module.exports = function(options){
 
@@ -11,61 +77,5 @@ module.exports = function(options){
 		throw new Error('recaptcha_private_key required');
 	}
 
-	if(!options.mailgun_domain){
-		throw new Error('mailgun_domain required');
-	}
-
-	if(!options.mailgun_key){
-		throw new Error('mailgun_key required');
-	}
-
-	if(!options.emails){
-		throw new Error('emails required');
-	}
-
-	var mailer = TextMail({
-		domain:options.mailgun_domain,
-		key:options.mailgun_key,
-		template_root:__dirname + '/templates'
-	})
-
-	var contactmail = mailer.create('/contact.ejs', 'Contact Form Submission', options.emails);
-	var privateKey = options.recaptcha_private_key;
-
-	return function(ip, formdata, callback){
-
-		formdata = formdata || {};
-
-	  var challenge = formdata.recaptcha_challenge_field;
-	  var response = formdata.recaptcha_response_field;
-
-	  var error_string = null;
-
-	  if(!challenge || !response){
-	  	error_string = 'Please fillout the captcha';
-	  }
-
-	  ['email', 'name', 'subject', 'message'].forEach(function(f){
-	  	var val = formdata[f];
-
-	  	if(!val){
-	  		error_string = 'please enter a ' + f + ' string';
-	  	}
-	  })
-
-	  if(error_string){
-	  	callback(error_string);
-	  	return;
-	  }
-
-	  simple_recaptcha(privateKey, ip, challenge, response, function(err) {
-
-	  	if (err){
-	    	return callback('The Captcha was entered incorrectly.  Please try again');
-	    }
-	    
-	  	contactmail(formdata.email, formdata, callback);
-
-	  })
-	}
+	return new Ravens(options);
 }
